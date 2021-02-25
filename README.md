@@ -41,6 +41,60 @@ To route traffic through WAF, the specified primary domain and any additional do
 If the application is actually configured in a DNS zone, you would normally create a **CNAME or ALIAS** record for **employee.example.com** using **WAF_Target** as its value.
 
 However, since this solution uses an **example.com** host name for the sample Employee application, you need to configure your machine (from which you'll access the application) to resolve the host.
+<br/>
+
+1. Set a WAF_TARGET environment variable for use in other commands, ensuring that you specify the CNAME Target listed in the WAF policy details as the value of the variable.<br/>
+            # Mac or Linux
+            export WAF_TARGET=employee-example-com.b.waas.oci.oraclecloud.net
+            # Windows
+            set WAF_TARGET=employee-example-com.b.waas.oci.oraclecloud.net
+ 2. Verify that traffic is flowing through WAF. Inspect the HTTP Response headers and expect to see the following: <br/>
+      Server: ZENEDGE <br/>
+      X-Cdn: Served-By-Zenedge <br/>
+
+            curl -I-X GET http://${WAF_TARGET}/public/ -H'host: employee.example.com'
+The preceding code should return an output similar to the following:
+
+            HTTP/1.1 200 OK
+            Content-Type: text/html
+            Connection: keep-alive
+            Server: ZENEDGE
+            ETag: "1565120174000"
+            X-Cache-Status: NOTCACHED
+            Content-Length: 14258
+            Date: Wed, 07 Aug 2019 20:22:35 GMT
+            Last-Modified: Tue, 07 Aug 2019 19:36:14 GMT
+            X-Zen-Fury: 1053bc526e3d722eadb457f2
+            
+3. Configure your machine to resolve the sample Employee application URL when loaded in a browser. This is done by creating an entry in your hosts file, which bypasses DNS and routes requests from your machine to the WAF IP address for **employee.example.com.**<br/><br/>
+      Identify a (there may be several) network IP address for the **$WAF_TARGET.**
+      
+              nslookup $WAF_TARGET
+      The preceding code should return an output similar to the following:
+      
+            Server:         192.168.X.X
+            Address:        192.168.X.X#YY
+            Non-authoritative answer:
+            employee-example-com.b.waas.oci.oraclecloud.net canonical name = oci.tm.u.waas.oci.oraclecloud.net.
+            oci.tm.u.waas.oci.oraclecloud.net  canonical name = us-seattle.u.waas.oci.oraclecloud.net.
+            Name:   us-seattle.u.waas.oci.oraclecloud.net
+            Address: 152.X.X.X
+            Name:   us-seattle.u.waas.oci.oraclecloud.net
+            Address: 152.X.X.Y
+            Name:   us-seattle.u.waas.oci.oraclecloud.net
+            Address: 152.X.X.Z
+        
+      Select any single address from the Non-authoritative answer section and create a hosts entry for the example primary domain in the /etc/hosts file as the following:
+
+            # hosts file entry
+            # <WAF IP Address>    <domain>  
+               152.X.X.Z          employee.example.com
+
+      ![image](https://user-images.githubusercontent.com/42166489/109106227-5fe99080-7755-11eb-869f-afcb26ae21ff.png)
+      
+      Open http://<employee.example.com>/public/ in a browser.
+  4. The application now runs over WAF.
+
 
 
 
